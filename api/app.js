@@ -18,14 +18,29 @@ app.use(function cors( req, res, next ) {
 
 app.use( connectRoute( function routes( router ) {
   function handleRequest( req, res, next ) {
+    console.log(req.params.slug || req.body.slug)
     var userRequested = req.params.slug || req.body.slug;
     var user = userRequested ? users[ userRequested ] : users;
     if( !user ) {
       res.statusCode = 404;
       user = '404 - Not found';
     }
-    res.setHeader( 'Content-Type', 'application/json' );
-    res.end( JSON.stringify( user ) );
+    console.log(req);
+    if (req.query && req.query.callback) {
+      res.set({
+        // nice to have, but Chrome dont seem to mind either way
+        'Access-Control-Allow-Origin': '*',
+        // right content type prevent warnings and errors
+        'Content-Type': 'text/javascript; charset=UTF-8',
+        // optional, this is in seconds, equivalent to 8h
+        'Cache-Control': 'public, max-age=28800'
+      });
+      res.send(200, "" + req.query.callback + "(" + JSON.stringify(myAwesomeResource) + ");");
+    } else {
+      res.setHeader( 'Content-Type', 'application/json' );
+      res.end( JSON.stringify( user ) );
+    }
+
   }
 
   router.get( '/api/users/', handleRequest );
