@@ -1,47 +1,73 @@
-;(function(root, factory) {
+/**!
+ * ajax - v0.0.9
+ * Ajax module in Vanilla JS
+ * https://github.com/fdaciuk/ajax
+
+ * Wed Aug 26 2015 07:30:42 GMT-0300 (BRT)
+ * MIT (c) Fernando Daciuk
+ */
+;
+(function(factory) {
   'use strict';
+
+  var root = (typeof window === 'object' && window.window === window && window) || (typeof global === 'object' && global.global === global && global);
   /* istanbul ignore next */
-  if(typeof define === 'function' && define.amd) {
-    define('Ajax', function() {
+  if (typeof define === 'function' && define.amd) {
+    define('Ajax', function(){
       return factory(root);
     });
-  }
-  else if(typeof exports === 'object') {
+  } else if (typeof exports === 'object') {
     exports = module.exports = factory(root);
-  }
-  else {
+  } else {
     root.Ajax = factory(root);
   }
-})(this, function(root) {
+})(function(r) {
   'use strict';
 
   function Ajax() {
     var $public = {};
     var $private = {};
+    var root = r;
+
+    function getParamUrl(u, p) {
+      var t;
+      if (u.indexOf(p + "=") !== -1) {
+        t = u.substring(u.indexOf(p + "=") + (p.length + 1));
+        if (t.indexOf("&") !== -1) {
+          t = t.substring(0, t.indexOf("&"));
+        }
+      }
+      return t || null;
+    }
     $private.methods = {
       done: function() {},
       error: function() {},
       always: function() {}
     };
-    $public.jsonp = function jsonp(url, callback, context, callbackName) {
-      var unique = 0;
-      return function(url, callback, context) {
-        var name = callbackName || "_jsonp_" + unique++;
-        url += (url.match(/\?/) && !url.match(/\&callback=/)
-          ? "&callback=" : "?callback=");
-        url += name;
-        var script = root.document.createElement('script');
-        script.type = 'text/javascript';
-        script.src = url;
-        root[name] = function(data) {
-          callback.call((context || root), data);
-          root.document.getElementsByTagName('head')[0].removeChild(script);
-          script = null;
-          delete root[name];
-        };
-        root.document.getElementsByTagName('head')[0].appendChild(script);
+    $public.jsonp = function jsonp(url, passedInCallback) {
+      var jsonPcallback = function(data) {
+        // remove from global scope
+        delete root.jsonCallback;
+        return passedInCallback(data);
       };
-    };
+      // Vanilla
+      var jsonCallback = function(data) {
+        jsonPcallback(data);
+      }
+      if (/\?/gi.test(url)) {
+        url += "&"
+      } else if (/\&/gi.test(url)) {
+        url += "?"
+      }
+      url += "callback=jsonCallback";
+
+      // put on global scope temporaralllyyyy
+      root.jsonCallback = jsonCallback;
+
+      var scr = root.document.createElement('script');
+      scr.src = url;
+      root.document.body.appendChild(scr);
+    }
     $public.get = function get(url) {
       return $private.XHRConnection('GET', url, null);
     };
@@ -66,25 +92,22 @@
     $private.ready = function ready() {
       var xhr = this;
       var DONE = 4;
-      if(xhr.readyState === DONE) {
-        $private.methods.always
-          .apply($private.methods, $private.parseResponse(xhr));
-        if(xhr.status >= 200 && xhr.status < 300) {
-          return $private.methods.done
-            .apply($private.methods, $private.parseResponse(xhr));
+      if (xhr.readyState === DONE) {
+        $private.methods.always.apply($private.methods, $private.parseResponse(xhr));
+        if (xhr.status >= 200 && xhr.status < 300) {
+          return $private.methods.done.apply($private.methods, $private.parseResponse(xhr));
         }
-        $private.methods.error
-          .apply($private.methods, $private.parseResponse(xhr));
+        $private.methods.error.apply($private.methods, $private.parseResponse(xhr));
       }
     };
     $private.parseResponse = function parseResponse(xhr) {
       var result;
       try {
         result = JSON.parse(xhr.responseText);
-      } catch(e) {
+      } catch (e) {
         result = xhr.responseText;
       }
-      return [ result, xhr ];
+      return [result, xhr];
     };
     $private.promises = function promises() {
       var allPromises = {};
@@ -103,8 +126,7 @@
     };
     $private.getQueryString = function getQueryString(object) {
       return Object.keys(object).map(function(item) {
-        return encodeURIComponent(item) + '='
-          + encodeURIComponent(object[item]);
+        return encodeURIComponent(item) + '=' + encodeURIComponent(object[item]);
       }).join('&');
     };
     $private.isObject = function isObject(data) {
