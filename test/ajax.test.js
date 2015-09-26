@@ -19,5 +19,9 @@
     it( 'Should have `delete` method', function() {
       ajax.should.have.property( 'delete' );
     });
+
+    it( 'Should have `jsonp` method', function() {
+      ajax.should.have.property( 'jsonp' );
+    });
   });
 })( window.chai.should(), window.chai.expect, window.Ajax );

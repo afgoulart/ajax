@@ -46,11 +46,9 @@
     };
     $public.jsonp = function jsonp(url, passedInCallback) {
       var jsonPcallback = function(data) {
-        // remove from global scope
         delete root.jsonCallback;
         return passedInCallback(data);
       };
-      // Vanilla
       var jsonCallback = function(data) {
         jsonPcallback(data);
       }
@@ -60,10 +58,7 @@
         url += "?"
       }
       url += "callback=jsonCallback";
-
-      // put on global scope temporaralllyyyy
       root.jsonCallback = jsonCallback;
-
       var scr = root.document.createElement('script');
       scr.src = url;
       root.document.body.appendChild(scr);
